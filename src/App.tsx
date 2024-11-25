@@ -12,7 +12,7 @@ const initialState: RowColumnState<CellState> = [
   [false, false, false, false, false]
 ];
 
-const initalRules: RowColumnState<RuleDescription | undefined> = [
+const initalRules: RowColumnState<RuleDescription> = [
   [undefined, undefined, undefined, undefined, undefined],
   [undefined, undefined, undefined, undefined, undefined],
   [undefined, undefined, undefined, undefined, undefined],
@@ -29,7 +29,7 @@ type AppStatePackage = [
 ];
 
 function *performSolve(): Generator<AppStatePackage, undefined, typeof initialState> {
-  const discernedRules = initalRules.map(c => c.slice()) as RowColumnState<RuleDescription | undefined>;
+  const discernedRules = initalRules.map(c => c.slice()) as RowColumnState<RuleDescription>;
 
   let currentGrid = yield [
     `Enter your current watcher grid and then click "Next"`,
@@ -38,6 +38,10 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
 
 
   while (discernedRules.some(r => r.some(elem => !elem))) {
+    if (solvable()) {
+      break;
+    }
+
     const nextPos = getNextImmediatelyCheckableRule();
 
     if (!nextPos) {
@@ -58,7 +62,6 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
         nextExpectedState.board,
         true,
       ];
-      continue;
     }
     else {
       // Request the player click this statue in-game
@@ -148,7 +151,7 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
   }
 
   function getGridDiff(gridA: RowColumnState<CellState>, gridB: RowColumnState<CellState>): RuleDescription {
-    const rule = initialState.map(r => r.slice()) as RuleDescription;
+    const rule = (initialState.map(r => r.slice()) as RuleDescription)!;
     for (let i = 0; i < gridA.length; i++) {
       for (let j = 0; j < gridA[i].length; j++) {
         if (gridA[i][j] !== gridB[i][j]) {
@@ -161,6 +164,26 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
 
   function countDiscernedRules() {
     return discernedRules.reduce((p, elem) => p + elem.reduce((p, elem) => elem ? p + 1 : p, 0), 0)
+  }
+
+  function solvable() {
+    const ruleCount = countDiscernedRules();
+    if (ruleCount < 5 || ruleCount > 15) {
+      // Too few rules? don't even bother. Too many? Exhaustive check without
+      // guarantee of solution takes too long; don't bother and just require the full ruleset
+      return false;
+    }
+    const solver = new Solver(false);
+    const gen = solver.solutions({
+      route: [],
+      board: currentGrid,
+      rules: discernedRules,
+    });
+    const first = gen.next();
+    if (!first.done) {
+      return true;
+    }
+    return false;
   }
 }
 
