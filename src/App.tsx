@@ -72,10 +72,32 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
       ];
 
       const newRule = getGridDiff(currentGrid, nextGrid);
-      discernedRules[nextPos[0]][nextPos[1]] = newRule;
+      const numberChanged = countChangesInRule(newRule);
       currentGrid = nextGrid;
+      if (numberChanged !== 5) {
+        // Invalid diff - wrong statue count changed
+        currentGrid = yield [
+          `Oops! It looks like you toggled ${numberChanged} statues there, but exactly 5 should have changed. So you don't have to start over entirely, we'll try that statue again later. Double check that this board matches what you have in-game and adjust if needed, then click "Next" to continue!`,
+          countDiscernedRules()/25,
+        ];
+      }
+      else if (!newRule[nextPos[0]][nextPos[1]]) {
+        // Invalid diff - requested statue not part of change
+        currentGrid = yield [
+          `Oops! It looks like you didn't toggle the requested statue as part of that change. So you don't have to start over entirely, we'll try that statue again later. Double check that this board matches what you have in-game and adjust if needed, then click "Next" to continue!`,
+          countDiscernedRules()/25,
+        ]
+      }
+      else {
+        discernedRules[nextPos[0]][nextPos[1]] = newRule;
+      }
     }
   }
+
+  currentGrid = yield [
+    `Sufficient rules to discover a solution have been input! Double check this grid is accurate to your game, then click "Next" to generate a path to the solution! This might take a bit, depending on your computer, but probably not that long. If it takes too long, you may have input some state incorrectly - if so, you'll need to refresh the page and start over.`,
+    1,
+  ];
 
   // All rules discovered, solve!
 
@@ -89,7 +111,10 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
   if (!firstSolution.value || firstSolution.done) {
     yield [
       `Something has gone wrong and no solution was found - refresh the page and start over to try again.`,
-      0
+      0,
+      undefined,
+      undefined,
+      true
     ];
     return;
   }
@@ -119,6 +144,10 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
   ];
   return;
 
+  function countChangesInRule(rule: NonNullable<RuleDescription>) {
+    return rule.reduce((p, elem) => p + elem.reduce((p, elem) => elem ? p + 1 : p, 0), 0);
+  }
+
   function getNextImmediatelyCheckableRule(): [number, number] | undefined {
     for (let i = 0; i < discernedRules.length; i++) {
       for (let j = 0; j < discernedRules[i].length; j++) {
@@ -147,10 +176,19 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
       }
     }
     // TODO: Click at random? eh
-    throw new Error("Impossible state? - no statue will reveal a statue that we dont know about yet");
+    for (let ii = 0; ii < currentGrid.length; ii++) {
+      for (let jj = 0; jj < currentGrid[ii].length; jj++) {
+        if (currentGrid[ii][jj]) {
+          // fine, click at "random"... in a very guided way
+          return [ii, jj];
+        }
+      }
+    }
+    
+    throw new Error("Impossible state? No active statues? - no statue will reveal a statue that we dont know about yet");
   }
 
-  function getGridDiff(gridA: RowColumnState<CellState>, gridB: RowColumnState<CellState>): RuleDescription {
+  function getGridDiff(gridA: RowColumnState<CellState>, gridB: RowColumnState<CellState>): NonNullable<RuleDescription> {
     const rule = (initialState.map(r => r.slice()) as RuleDescription)!;
     for (let i = 0; i < gridA.length; i++) {
       for (let j = 0; j < gridA[i].length; j++) {
@@ -222,7 +260,10 @@ function App() {
           if (gridOverrideOnNext) {
             setGridState(gridOverrideOnNext);
           }
-          setCurrentState(stateGen.next(gridState));
+          const nextVal = stateGen.next(gridState);
+          if (!nextVal.done) {
+            setCurrentState(nextVal);
+          }
         }}>Next ⏩</button>
       </header>
       <footer>
