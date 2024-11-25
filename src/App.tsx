@@ -46,7 +46,17 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
 
     if (!nextPos) {
       // Can't immediately press a statue of interest, lookup another statue that can raise one of interest
-      const [fallbackPosI, fallbackPosJ] = getStatueThatCanActivateAStatueOfInterest()
+      const fallbackPos = getStatueThatCanActivateAStatueOfInterest();
+      if (!fallbackPos) {
+        const firstUnreachable = getFirstUnreachableStatue();
+        currentGrid = yield [
+          `There is no statue recorded as controlling statue ${mapCoord(...firstUnreachable)}, but we need to test it to find a solution. You can try changing your grid around to make it accessible (both in-game and here) and press "Next", but most likely this indicates a data entry error somewhere along the way that will prevent finding a solution, and you need to refresh the page and start over.`,
+          countDiscernedRules()/25,
+          firstUnreachable
+        ];
+        continue;
+      }
+      const [fallbackPosI, fallbackPosJ] = fallbackPos;
 
       // Request the player click this statue in-game to shuffle the board state
       const nextExpectedState = (new Solver(false)).applyRule(discernedRules[fallbackPosI][fallbackPosJ]!, {
@@ -144,6 +154,17 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
   ];
   return;
 
+  function getFirstUnreachableStatue(): [number, number] {
+    for (let i = 0; i < discernedRules.length; i++) {
+      for (let j = 0; j < discernedRules[i].length; j++) {
+        if (!discernedRules[i][j] && !currentGrid[i][j]) {
+          return [i, j];
+        }
+      }
+    }
+    throw new Error("Somehow we think there's an unreachable statue (indicating a data input error), but there's no statues without a rule left that are inactive. If you see this error in the console... just start over, something is very wrong. This aughta be impossible.");
+  }
+
   function countChangesInRule(rule: NonNullable<RuleDescription>) {
     return rule.reduce((p, elem) => p + elem.reduce((p, elem) => elem ? p + 1 : p, 0), 0);
   }
@@ -159,7 +180,7 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
     return undefined;
   }
 
-  function getStatueThatCanActivateAStatueOfInterest(): [number, number] {
+  function getStatueThatCanActivateAStatueOfInterest(): [number, number] | undefined {
     for (let i = 0; i < discernedRules.length; i++) {
       for (let j = 0; j < discernedRules[i].length; j++) {
         if (discernedRules[i][j] && currentGrid[i][j]) {
@@ -175,17 +196,7 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
         }
       }
     }
-    // TODO: Click at random? eh
-    for (let ii = 0; ii < currentGrid.length; ii++) {
-      for (let jj = 0; jj < currentGrid[ii].length; jj++) {
-        if (currentGrid[ii][jj]) {
-          // fine, click at "random"... in a very guided way
-          return [ii, jj];
-        }
-      }
-    }
-    
-    throw new Error("Impossible state? No active statues? - no statue will reveal a statue that we dont know about yet");
+    return undefined;
   }
 
   function getGridDiff(gridA: RowColumnState<CellState>, gridB: RowColumnState<CellState>): NonNullable<RuleDescription> {
