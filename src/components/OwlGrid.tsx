@@ -2,18 +2,22 @@
 import { CellState, RowColumnState } from "solved/dist/puzzles/watchers";
 import "./OwlGrid.css";
 
+const formatter = Intl.NumberFormat(undefined, { maximumSignificantDigits: 2 });
+
 export const OwlGrid = (({
     onGridELementClicked,
     gridState,
     disabled,
-    highlighted
+    highlighted,
+    progress,
 }: {
     onGridELementClicked: (i: number, j: number) => void,
     gridState: RowColumnState<CellState>,
+    progress: number,
     disabled?: boolean,
     highlighted?: [number, number]
 }) => {
-    const headers = [<th></th>];
+    const headers = [<th>{formatter.format(progress * 100)}%</th>];
     for (let i=0; i < gridState.length; i++) {
         const letter = String.fromCharCode("A".charCodeAt(0) + i);
         headers.push(<th>{letter}</th>);

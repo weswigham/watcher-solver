@@ -22,6 +22,7 @@ const initalRules: RowColumnState<RuleDescription | undefined> = [
 
 type AppStatePackage = [
   instruction: string,
+  progress: number,
   highlightPosition?: [i: number, j: number],
   setGridTo?: RowColumnState<CellState>,
   disableGridSelect?: boolean
@@ -32,6 +33,7 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
 
   let currentGrid = yield [
     `Enter your current watcher grid and then click "Next"`,
+    0
   ];
 
 
@@ -51,6 +53,7 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
 
       currentGrid = yield [
         `Click statue ${mapCoord(fallbackPosI, fallbackPosJ)} in-game, and click "Next"`,
+        countDiscernedRules()/25,
         [fallbackPosI, fallbackPosJ],
         nextExpectedState.board,
         true,
@@ -61,6 +64,7 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
       // Request the player click this statue in-game
       const nextGrid = yield [
         `Click statue ${mapCoord(...nextPos)} in-game, update this grid to match in-game, and click "Next"`,
+        countDiscernedRules()/25,
         nextPos
       ];
 
@@ -82,6 +86,7 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
   if (!firstSolution.value || firstSolution.done) {
     yield [
       `Something has gone wrong and no solution was found - refresh the page and start over to try again.`,
+      0
     ];
     return;
   }
@@ -95,6 +100,7 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
     currentGrid = yield [
       `Solution generated! Full route: ${route.map(e => mapCoord(...e))}.
 Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
+      1,
       [i, j],
       nextExpectedState.board,
       true,
@@ -103,6 +109,7 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
 
   yield [
     `Puzzle complete! Go collect your reward from the owl statue at the entrance to the room!`,
+    1,
     undefined,
     initialState,
     true,
@@ -151,6 +158,10 @@ Click on ${mapCoord(i, j)} in-game and then click "Next" here.`,
     }
     return rule;
   }
+
+  function countDiscernedRules() {
+    return discernedRules.reduce((p, elem) => p + elem.reduce((p, elem) => elem ? p + 1 : p, 0), 0)
+  }
 }
 
 const stateGen = performSolve();
@@ -168,7 +179,7 @@ function App() {
       </div>
     );
   }
-  const {value: [instructionText, highlightTile, gridOverrideOnNext, disableGrid]} = currentState;
+  const {value: [instructionText, progress, highlightTile, gridOverrideOnNext, disableGrid]} = currentState;
   const handleClick = (i: number, j: number) => {
       const newState = gridState.map(row => row.slice()) as RowColumnState<CellState>;
       newState[i][j] = !newState[i][j];
@@ -183,7 +194,7 @@ function App() {
       <header className="App-header">
         <p>Welcome! This site functions as a solver for the Watcher statue puzzle within the Vault of the Wardens instance in World of Warcraft as part of the Felcycle secret. If you don't know what that is, check out the <a href="https://www.wowhead.com/guide/secrets/ratts-revenge-incognitro-felcycle-guide">wowhead article</a> or <a href="https://discord.gg/wowsecrets">WoW secrets discord!</a></p>
         <p>{instructionText}</p>
-        <OwlGrid gridState={gridState} onGridELementClicked={handleClick} disabled={disableGrid} highlighted={highlightTile} />
+        <OwlGrid gridState={gridState} onGridELementClicked={handleClick} disabled={disableGrid} highlighted={highlightTile} progress={progress} />
         <button disabled={!canAdvance()} onClick={() => {
           if (gridOverrideOnNext) {
             setGridState(gridOverrideOnNext);
