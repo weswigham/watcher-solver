@@ -22,6 +22,10 @@
     transform: translateY(-50%) translateX(-50%);
     width: 2.5em;
     height: 2.5em;
+    -webkit-filter:hue-rotate(150deg);
+    -moz-filter:hue-rotate(150deg);
+    -ms-filter:hue-rotate(150deg);
+    filter:hue-rotate(150deg);
 }
 
 .desaturated {
