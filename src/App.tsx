@@ -12,7 +12,7 @@ const initialState: RowColumnState<CellState> = [
   [false, false, false, false, false]
 ];
 
-const weeklyQuestState: RowColumnState<CellState> = [
+const worldQuestState: RowColumnState<CellState> = [
   [true , false, false, false, true ],
   [false, false, true , false, false],
   [false, true , true , true , false],
@@ -20,7 +20,7 @@ const weeklyQuestState: RowColumnState<CellState> = [
   [true , false, false, false, true ]
 ];
 
-const weeklyQuestDestState: RowColumnState<CellState> = [
+const worldQuestDestState: RowColumnState<CellState> = [
   [false, false, false, false, false],
   [false, false, false, false, false],
   [false, false, true , false, false],
@@ -36,7 +36,7 @@ const initalRules: RowColumnState<RuleDescription> = [
   [undefined, undefined, undefined, undefined, undefined]
 ]
 
-const weeklyQuestRules = initalRules.map(e => e.slice()) as RowColumnState<RuleDescription>;
+const worldQuestRules = initalRules.map(e => e.slice()) as RowColumnState<RuleDescription>;
 
 function modulus(num: number, modulo: number) {
   const result = num % modulo;
@@ -46,7 +46,7 @@ function modulus(num: number, modulo: number) {
 for (let i = 0; i < 5; i++) {
   for (let j = 0; j < 5; j++) {
     const rule = initialState.map(e => e.slice()) as RowColumnState<CellState>;
-    weeklyQuestRules[i][j] = rule;
+    worldQuestRules[i][j] = rule;
     rule[i][j] = true;
     rule[modulus(i + 1, 5)][j] = true;
     rule[modulus(i - 1, 5)][j] = true;
@@ -68,7 +68,7 @@ function gridEquals(gridA: RowColumnState<CellState>, gridB: RowColumnState<Cell
 
 class WQSolver extends Solver {
   isSolution(state: State): boolean {
-    return gridEquals(state.board, weeklyQuestDestState);
+    return gridEquals(state.board, worldQuestDestState);
   }
 }
 
@@ -88,12 +88,12 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
     0
   ];
 
-  if (gridEquals(currentGrid, weeklyQuestState)) {
+  if (gridEquals(currentGrid, worldQuestState)) {
     const solver = new WQSolver(false);
     const solution = solver.solutions({
       route: [],
       board: currentGrid,
-      rules: weeklyQuestRules,
+      rules: worldQuestRules,
     });
 
     const firstSolution = solution.next();
@@ -111,13 +111,13 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
     const routeText = "" + route.map(e => mapCoord(...e));
 
     for (const coord of route) {
-      const nextExpectedState = solver.applyRule(weeklyQuestRules[coord[0]][coord[1]]!, {
+      const nextExpectedState = solver.applyRule(worldQuestRules[coord[0]][coord[1]]!, {
         route: [],
         board: currentGrid,
-        rules: weeklyQuestRules
+        rules: worldQuestRules
       }, ...coord);
       yield [
-        `This looks like a grid for the weekly quest version of the puzzle - let's quickly solve it and get it out of the way. If you know it isn't, just step through this solution to the end. The full path is ${routeText}. Click on ${mapCoord(...coord)} in-game and click "Next".`,
+        `This looks like a grid for the world quest version of the puzzle - let's quickly solve it and get it out of the way. If you know it isn't, just step through this solution to the end. The full path is ${routeText}. Click on ${mapCoord(...coord)} in-game and click "Next".`,
         0,
         coord,
         nextExpectedState.board,
@@ -127,7 +127,7 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
     }
 
     currentGrid = yield [
-      `This looks like a grid for the weekly quest version of the puzzle - let's quickly solve it and get it out of the way. If you know it isn't, just step through this solution to the end. The full path is ${routeText}. Click on C3 in-game and click "Next".`,
+      `This looks like a grid for the world quest version of the puzzle - let's quickly solve it and get it out of the way. If you know it isn't, just step through this solution to the end. The full path is ${routeText}. Click on C3 in-game and click "Next".`,
       0,
       [2, 2],
       undefined,
