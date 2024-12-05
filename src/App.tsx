@@ -1,13 +1,29 @@
 import { useState } from 'react';
 import './App.css';
 import { OwlGrid } from './components/OwlGrid';
-import { Solver, type CellState, type RowColumnState, type RuleDescription } from "solved/dist/puzzles/watchers";
+import { Solver, type CellState, type RowColumnState, type RuleDescription, State } from "solved/dist/puzzles/watchers";
 import { mapCoord } from './util';
 
 const initialState: RowColumnState<CellState> = [
   [false, false, false, false, false],
   [false, false, false, false, false],
   [false, false, false, false, false],
+  [false, false, false, false, false],
+  [false, false, false, false, false]
+];
+
+const weeklyQuestState: RowColumnState<CellState> = [
+  [true , false, false, false, true ],
+  [false, false, true , false, false],
+  [false, true , true , true , false],
+  [false, false, true , false, false],
+  [true , false, false, false, true ]
+];
+
+const weeklyQuestDestState: RowColumnState<CellState> = [
+  [false, false, false, false, false],
+  [false, false, false, false, false],
+  [false, false, true , false, false],
   [false, false, false, false, false],
   [false, false, false, false, false]
 ];
@@ -19,6 +35,42 @@ const initalRules: RowColumnState<RuleDescription> = [
   [undefined, undefined, undefined, undefined, undefined],
   [undefined, undefined, undefined, undefined, undefined]
 ]
+
+const weeklyQuestRules = initalRules.map(e => e.slice()) as RowColumnState<RuleDescription>;
+
+function modulus(num: number, modulo: number) {
+  const result = num % modulo;
+  return result < 0 ? (result + modulo) : result;
+}
+
+for (let i = 0; i < 5; i++) {
+  for (let j = 0; j < 5; j++) {
+    const rule = initialState.map(e => e.slice()) as RowColumnState<CellState>;
+    weeklyQuestRules[i][j] = rule;
+    rule[i][j] = true;
+    rule[modulus(i + 1, 5)][j] = true;
+    rule[modulus(i - 1, 5)][j] = true;
+    rule[i][modulus(j + 1, 5)] = true;
+    rule[i][modulus(j - 1, 5)] = true;
+  }
+}
+
+function gridEquals(gridA: RowColumnState<CellState>, gridB: RowColumnState<CellState>) {
+  for (let i = 0; i < gridA.length; i++) {
+    for (let j = 0; j < gridA[i].length; j++) {
+      if (!!gridA[i][j] !== !!gridB[i][j]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+class WQSolver extends Solver {
+  isSolution(state: State): boolean {
+    return gridEquals(state.board, weeklyQuestDestState);
+  }
+}
 
 type AppStatePackage = [
   instruction: string,
@@ -35,6 +87,58 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
     `Enter your current watcher grid and then click "Next"`,
     0
   ];
+
+  if (gridEquals(currentGrid, weeklyQuestState)) {
+    const solver = new WQSolver(false);
+    const solution = solver.solutions({
+      route: [],
+      board: currentGrid,
+      rules: weeklyQuestRules,
+    });
+
+    const firstSolution = solution.next();
+    if (!firstSolution.value || firstSolution.done) {
+      yield [
+        `Something has gone wrong and no solution was found - refresh the page and start over to try again.`,
+        0,
+        undefined,
+        undefined,
+        true
+      ];
+      return;
+    }
+    const route = firstSolution.value.route;
+    const routeText = "" + route.map(e => mapCoord(...e));
+
+    for (const coord of route) {
+      const nextExpectedState = solver.applyRule(weeklyQuestRules[coord[0]][coord[1]]!, {
+        route: [],
+        board: currentGrid,
+        rules: weeklyQuestRules
+      }, ...coord);
+      yield [
+        `This looks like a grid for the weekly quest version of the puzzle - let's quickly solve it and get it out of the way. If you know it isn't, just step through this solution to the end. The full path is ${routeText}. Click on ${mapCoord(...coord)} in-game and click "Next".`,
+        0,
+        coord,
+        nextExpectedState.board,
+        true,
+      ];
+      currentGrid = nextExpectedState.board;
+    }
+
+    currentGrid = yield [
+      `This looks like a grid for the weekly quest version of the puzzle - let's quickly solve it and get it out of the way. If you know it isn't, just step through this solution to the end. The full path is ${routeText}. Click on C3 in-game and click "Next".`,
+      0,
+      [2, 2],
+      undefined,
+      true,
+    ];
+
+    currentGrid = yield [
+      `And that should be solved! Check to see if your box has spawned at the entrance to the room, if not, continue by placing the watcher statue at the appropriate position to start the felcycle version of the puzzle, then enter your new watcher grid and click "Next".`,
+      0,
+    ];
+  }
 
 
   while (discernedRules.some(r => r.some(elem => !elem))) {
@@ -65,13 +169,14 @@ function *performSolve(): Generator<AppStatePackage, undefined, typeof initialSt
         rules: discernedRules as RowColumnState<RuleDescription>
       }, fallbackPosI, fallbackPosJ);
 
-      currentGrid = yield [
+      yield [
         `Click statue ${mapCoord(fallbackPosI, fallbackPosJ)} in-game, and click "Next"`,
         countDiscernedRules()/25,
         [fallbackPosI, fallbackPosJ],
         nextExpectedState.board,
         true,
       ];
+      currentGrid = nextExpectedState.board;
     }
     else {
       // Request the player click this statue in-game

@@ -17,15 +17,15 @@ export const OwlGrid = (({
     disabled?: boolean,
     highlighted?: [number, number]
 }) => {
-    const headers = [<th>{formatter.format(progress * 100)}%</th>];
+    const headers = [<th key="-1">{formatter.format(progress * 100)}%</th>];
     for (let i=0; i < gridState.length; i++) {
         const letter = String.fromCharCode("A".charCodeAt(0) + i);
-        headers.push(<th>{letter}</th>);
+        headers.push(<th key={i}>{letter}</th>);
     }
     const children = [<tr key="-1">{headers}</tr>];
     for (let i=0; i < gridState.length; i++) {
         const row = [];
-        row.push(<th>{i + 1}</th>);
+        row.push(<th key={-1}>{i + 1}</th>);
         for (let j=0; j < gridState[i].length; j++) {
             const classNames = ["owl-tile"];
             if (gridState[i][j]) {
@@ -41,5 +41,5 @@ export const OwlGrid = (({
         }
         children.push(<tr className="owl-row-container" key={i}>{row}</tr>);
     }
-    return <table className="owl-grid">{children}</table>;
+    return <table className="owl-grid"><tbody>{children}</tbody></table>;
 }) satisfies React.FunctionComponent<any>;
