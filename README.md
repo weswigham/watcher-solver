@@ -1,3 +1,7 @@
+# watcher-solver
+
+A tool for solving the watcher puzzle in World of Warcraft. Available on-line [here.](https://ham.io/watcher-solver)
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
